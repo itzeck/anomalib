@@ -133,27 +133,28 @@ class EfficientAd(AnomalyModule):
         chanel_sum: torch.Tensor | None = None
         chanel_sum_sqr: torch.Tensor | None = None
         model.eval()
-        for batch in tqdm.tqdm(dataloader, desc="Calculate teacher channel mean & std", position=0, leave=True):
-            y = self.model.teacher(batch["image"].to(self.device))
-            if not arrays_defined:
-                _, num_channels, _, _ = y.shape
-                n = torch.zeros((num_channels,), dtype=torch.int64, device=y.device)
-                chanel_sum = torch.zeros((num_channels,), dtype=torch.float32, device=y.device)
-                chanel_sum_sqr = torch.zeros((num_channels,), dtype=torch.float32, device=y.device)
-                arrays_defined = True
-
-            n += y[:, 0].numel()
-            chanel_sum += torch.sum(y, dim=[0, 2, 3])
-            chanel_sum_sqr += torch.sum(y**2, dim=[0, 2, 3])
-
-        if n is None:
-            msg = "The value of 'n' cannot be None."
-            raise ValueError(msg)
-
-        channel_mean = chanel_sum / n
-
-        channel_std = (torch.sqrt((chanel_sum_sqr / n) - (channel_mean**2))).float()[None, :, None, None]
-        channel_mean = channel_mean.float()[None, :, None, None]
+        with torch.no_grad():
+            for batch in tqdm.tqdm(dataloader, desc="Calculate teacher channel mean & std", position=0, leave=True):
+                y = self.model.teacher(batch["image"].to(self.device))
+                if not arrays_defined:
+                    _, num_channels, _, _ = y.shape
+                    n = torch.zeros((num_channels,), dtype=torch.int64, device=y.device)
+                    chanel_sum = torch.zeros((num_channels,), dtype=torch.float32, device=y.device)
+                    chanel_sum_sqr = torch.zeros((num_channels,), dtype=torch.float32, device=y.device)
+                    arrays_defined = True
+    
+                n += y[:, 0].numel()
+                chanel_sum += torch.sum(y, dim=[0, 2, 3])
+                chanel_sum_sqr += torch.sum(y**2, dim=[0, 2, 3])
+    
+            if n is None:
+                msg = "The value of 'n' cannot be None."
+                raise ValueError(msg)
+    
+            channel_mean = chanel_sum / n
+    
+            channel_std = (torch.sqrt((chanel_sum_sqr / n) - (channel_mean**2))).float()[None, :, None, None]
+            channel_mean = channel_mean.float()[None, :, None, None]
         model.train()
         return {"mean": channel_mean, "std": channel_std}
 
@@ -172,17 +173,18 @@ class EfficientAd(AnomalyModule):
         maps_ae = []
         logger.info("Calculate Validation Dataset Quantiles")
         model.eval()
-        for batch in tqdm.tqdm(dataloader, desc="Calculate Validation Dataset Quantiles", position=0, leave=True):
-            for img, label in zip(batch["image"], batch["label"], strict=True):
-                if label == 0:  # only use good images of validation set!
-                    output = self.model(img.to(self.device), normalize=False)
-                    map_st = output["map_st"]
-                    map_ae = output["map_ae"]
-                    maps_st.append(map_st)
-                    maps_ae.append(map_ae)
-
-        qa_st, qb_st = self._get_quantiles_of_maps(maps_st)
-        qa_ae, qb_ae = self._get_quantiles_of_maps(maps_ae)
+        with torch.no_grad():
+            for batch in tqdm.tqdm(dataloader, desc="Calculate Validation Dataset Quantiles", position=0, leave=True):
+                for img, label in zip(batch["image"], batch["label"], strict=True):
+                    if label == 0:  # only use good images of validation set!
+                        output = self.model(img.to(self.device), normalize=False)
+                        map_st = output["map_st"]
+                        map_ae = output["map_ae"]
+                        maps_st.append(map_st)
+                        maps_ae.append(map_ae)
+    
+            qa_st, qb_st = self._get_quantiles_of_maps(maps_st)
+            qa_ae, qb_ae = self._get_quantiles_of_maps(maps_ae)
         model.train()
         return {"qa_st": qa_st, "qa_ae": qa_ae, "qb_st": qb_st, "qb_ae": qb_ae}
 
