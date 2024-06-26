@@ -132,7 +132,7 @@ class EfficientAd(AnomalyModule):
         n: torch.Tensor | None = None
         chanel_sum: torch.Tensor | None = None
         chanel_sum_sqr: torch.Tensor | None = None
-        model.eval()
+        self.model.eval()
         with torch.no_grad():
             for batch in tqdm.tqdm(dataloader, desc="Calculate teacher channel mean & std", position=0, leave=True):
                 y = self.model.teacher(batch["image"].to(self.device))
@@ -155,7 +155,7 @@ class EfficientAd(AnomalyModule):
     
             channel_std = (torch.sqrt((chanel_sum_sqr / n) - (channel_mean**2))).float()[None, :, None, None]
             channel_mean = channel_mean.float()[None, :, None, None]
-        model.train()
+        self.model.train()
         return {"mean": channel_mean, "std": channel_std}
 
     @torch.no_grad()
@@ -172,7 +172,7 @@ class EfficientAd(AnomalyModule):
         maps_st = []
         maps_ae = []
         logger.info("Calculate Validation Dataset Quantiles")
-        model.eval()
+        self.model.eval()
         with torch.no_grad():
             for batch in tqdm.tqdm(dataloader, desc="Calculate Validation Dataset Quantiles", position=0, leave=True):
                 for img, label in zip(batch["image"], batch["label"], strict=True):
@@ -185,7 +185,7 @@ class EfficientAd(AnomalyModule):
     
             qa_st, qb_st = self._get_quantiles_of_maps(maps_st)
             qa_ae, qb_ae = self._get_quantiles_of_maps(maps_ae)
-        model.train()
+        self.model.train()
         return {"qa_st": qa_st, "qa_ae": qa_ae, "qb_st": qb_st, "qb_ae": qb_ae}
 
     def _get_quantiles_of_maps(self, maps: list[torch.Tensor]) -> tuple[torch.Tensor, torch.Tensor]:
