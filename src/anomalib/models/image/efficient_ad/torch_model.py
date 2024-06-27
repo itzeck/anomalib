@@ -31,7 +31,7 @@ def imagenet_norm_batch(x: torch.Tensor) -> torch.Tensor:
     return (x - mean) / std
 
 
-def reduce_tensor_elems(tensor: torch.Tensor, m: int = 2**24) -> torch.Tensor:
+def reduce_tensor_elems(tensor: torch.Tensor, m: int = 2**20) -> torch.Tensor:
     """Reduce tensor elements.
 
     This function flatten n-dimensional tensors,  selects m elements from it
@@ -51,7 +51,7 @@ def reduce_tensor_elems(tensor: torch.Tensor, m: int = 2**24) -> torch.Tensor:
     tensor = torch.flatten(tensor)
     if len(tensor) > m:
         # select a random subset with m elements.
-        perm = torch.randperm(len(tensor), device=tensor.device)
+        perm = torch.randperm(len(tensor), device=torch.device("cpu"))
         idx = perm[:m]
         tensor = tensor[idx]
     return tensor
