@@ -48,12 +48,16 @@ def reduce_tensor_elems(tensor: torch.Tensor, m: int = 2**24) -> torch.Tensor:
     Returns:
             Tensor: reduced tensor
     """
+    original_device = tensor.device
+    tensor = tensor.to(torch.device("cpu"))
     tensor = torch.flatten(tensor)
+
     if len(tensor) > m:
         # select a random subset with m elements.
         perm = torch.randperm(len(tensor), device=torch.device("cpu"))
         idx = perm[:m]
         tensor = tensor[idx]
+    tensor = tensor.to(original_device)
     return tensor
 
 
