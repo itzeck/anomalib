@@ -351,8 +351,28 @@ def read_image(path: str | Path, as_tensor: bool = False) -> torch.Tensor | np.n
     Returns:
         image as numpy array
     """
-    image = Image.open(path).convert("RGB")
-    return to_dtype(to_image(image), torch.float32, scale=True) if as_tensor else np.array(image) / 255.0
+    image = Image.open(path)
+    
+    # check if we have 16-bit image
+    16_bit_image = image.mode in ('I;16', 'I;16B', 'I;16L', 'I;16N')
+    # check how many channels we have
+        mode_to_channels = {
+        '1': 1,    'L': 1,   'P': 1,  # Single channel (palette has multiple colors but is a single channel technically)
+        'RGB': 3,  'YCbCr': 3,  'LAB': 3, 'HSV': 3,  # Three channels
+        'RGBA': 4, 'CMYK': 4, 'I;16': 1  # Four channels or special cases
+    }
+    num_channels = mode_to_channels[image.mode]
+
+    image = np.array(image, dtype=np.float32)
+    if 16_bit_image:
+        image = image/65535.0
+    else:
+        image = image/255.0
+        
+    if num_channels == 1:
+        image = np.stack([image]*3, axis=-1)
+    
+    return to_dtype(to_image(image), torch.float32, scale=True) if as_tensor else image
 
 
 def read_mask(path: str | Path, as_tensor: bool = False) -> torch.Tensor | np.ndarray:
