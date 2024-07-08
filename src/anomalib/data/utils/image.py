@@ -355,19 +355,16 @@ def read_image(path: str | Path, as_tensor: bool = False) -> torch.Tensor | np.n
     
     # check if we have 16-bit image
     bit_depth_16 = image.mode in ('I;16', 'I;16B', 'I;16L', 'I;16N')
+    
     # check how many channels we have
     image = np.array(image, dtype=np.float32)
-    # Now the shape of the image_array will reflect the presence of four channels if the image is RGBA
     if image.ndim == 2:
-        # Image has only height and width, hence it is a single-channel image
         num_channels = 1
     elif image.ndim == 3:
-        # The third dimension of the array represents the number of channels
         num_channels = image.shape[2]
     else:
         raise ValueError(f"Unexpected image data format: {image.shape}")
 
-   
     if bit_depth_16:
         image = image/65535.0
     else:
